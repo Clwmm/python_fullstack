@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+backend/sqlite_data
+backend/__pycache__
+*.db
+sqlite_data/
