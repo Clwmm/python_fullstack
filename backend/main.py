@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from database import get_db, init_db
 import crud
+from generate_random_users import create_random_users
+from crud import clear_users_table
 
 app = FastAPI()
 origins = ["http://localhost"]
@@ -52,4 +54,10 @@ async def read_user(email: str, db=Depends(get_db)):
 async def read_users(db=Depends(get_db)):
     users = crud.get_users(db)
     return [dict(user) for user in users]  # Convert sqlite3.Row to dictionary
+
+# Get all user emails
+@app.get("/users/emails/")
+async def read_user_emails(db=Depends(get_db)):
+    emails = crud.get_all_user_emails(db)
+    return [email[0] for email in emails]  # Extract the email from each tuple
 

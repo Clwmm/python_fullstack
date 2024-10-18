@@ -10,3 +10,13 @@ Start the services:
 Stop the Containers:
     docker-compose down
     ctrl+c
+
+
+Frontend:
+    localhost:80
+
+Backend:
+    localhost:8080
+
+FastApi Docs:
+    localhost:8080/docs

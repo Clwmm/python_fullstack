@@ -24,6 +24,13 @@ def get_user_by_email(conn: Connection, email: str):
     cursor.close()  # Close the cursor
     return user
 
+def get_all_user_emails(conn):
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users')  # Select only the 'email' column
+    emails = cursor.fetchall()  # Fetch all rows
+    cursor.close()
+    return emails
+
 # Function to get all users
 def get_users(conn: Connection):
     cursor = conn.cursor()
@@ -31,3 +38,10 @@ def get_users(conn: Connection):
     users = cursor.fetchall()
     cursor.close()  # Close the cursor
     return users
+
+# Function to clear all records in the users table
+def clear_users_table(conn: Connection):
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM users')  # Delete all records
+    conn.commit()  # Commit the changes
+    cursor.close()

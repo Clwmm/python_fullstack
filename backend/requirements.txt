@@ -3,3 +3,4 @@ uvicorn[standard]
 sqlalchemy
 databases
 db-sqlite3
+faker
