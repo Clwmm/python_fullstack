@@ -1,6 +1,9 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+passlib
+python-jose
+pyjwt
 databases
 db-sqlite3
 faker
