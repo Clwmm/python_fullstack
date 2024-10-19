@@ -1,9 +1,13 @@
+import sqlite3
+import crud 
+import generate_random_users
+import database
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import sqlite3
+
 from database import get_db, init_db
-import crud
 from generate_random_users import create_random_users
 from crud import clear_users_table
 

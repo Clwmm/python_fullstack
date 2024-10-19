@@ -1,14 +1,14 @@
 from sqlite3 import Connection
 
 # Function to create a new user in the database
-def create_user(conn: Connection, name: str, email: str, password: str):
+def create_user(conn: Connection, username: str, email: str, password: str):
     cursor = conn.cursor()
     
     try:
         cursor.execute('''
-        INSERT INTO users (name, email, password) 
+        INSERT INTO users (username, email, password) 
         VALUES (?, ?, ?)
-        ''', (name, email, password))
+        ''', (username, email, password))
         conn.commit()
         return cursor.lastrowid  # Return the ID of the inserted user
     except sqlite3.IntegrityError:
