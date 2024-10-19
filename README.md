@@ -20,3 +20,13 @@ Backend:
 
 FastApi Docs:
     localhost:8080/docs
+
+
+Checking DB:
+    sqlite3 backend/test.db
+
+    list tables:
+        .tables
+
+    Query:
+        SELECT * from users;
