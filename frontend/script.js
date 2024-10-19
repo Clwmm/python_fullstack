@@ -7,11 +7,11 @@ function toggleForms() {
     const registerForm = document.getElementById('register-form');
 
     if (loginForm.style.display === 'none') {
-        loginForm.style.display = 'block';
+        loginForm.style.display = '';
         registerForm.style.display = 'none';
     } else {
         loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
+        registerForm.style.display = '';
     }
 }
 
@@ -57,10 +57,10 @@ async function users() {
         });
 
         if (response.ok) {
-            response = response.json()
-            console.log(response)
+            let usersData = await response.json();
+            console.log(usersData);
         } else {
-            console.log("Error: getUsers")
+            console.log("Error: getUsers");
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -98,10 +98,15 @@ async function register() {
 
 // Check if user is logged in (used on the home page)
 async function checkSession() {
+    const token = localStorage.getItem('access_token');
+    
     try {
         const response = await fetch(`${API_URL}/session`, {
             method: 'GET',
-            credentials: 'include'  // Send the session cookie with request
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
 
         if (!response.ok) {
@@ -115,10 +120,15 @@ async function checkSession() {
 
 // Logout function using FastAPI backend
 async function logout() {
+    const token = localStorage.getItem('access_token');
+
     try {
         const response = await fetch(`${API_URL}/logout`, {
             method: 'POST',
-            credentials: 'include'  // Send the session cookie with request
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
 
         if (response.ok) {

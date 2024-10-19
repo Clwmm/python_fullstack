@@ -85,6 +85,10 @@ def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_s
     user = session.query(models.User).all()
     return user
 
+@app.get('/session')
+def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
+    return 
+
 @app.post('/change-password')
 def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
     user = db.query(models.User).filter(models.User.email == request.email).first()
