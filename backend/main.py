@@ -2,7 +2,7 @@ import schemas
 import models
 import jwt
 from datetime import datetime
-from models import User, TokenTable
+from models import User, Token
 from database import Base, engine, SessionLocal
 from utils import create_access_token,create_refresh_token,verify_password,get_hashed_password
 from sqlalchemy.orm import Session
@@ -60,18 +60,18 @@ def register_user(user: schemas.UserCreate, session: Session = Depends(get_sessi
 def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
     user = db.query(User).filter(User.email == request.email).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password")
     hashed_pass = user.password
     if not verify_password(request.password, hashed_pass):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect password"
+            detail="Incorrect email or password"
         )
     
     access=create_access_token(user.id)
     refresh = create_refresh_token(user.id)
 
-    token_db = models.TokenTable(user_id=user.id,  access_toke=access,  refresh_toke=refresh, status=True)
+    token_db = models.Token(user=user,  access_toke=access,  refresh_toke=refresh, status=True)
     db.add(token_db)
     db.commit()
     db.refresh(token_db)
@@ -108,18 +108,20 @@ def change_password(request: schemas.changepassword, db: Session = Depends(get_s
 def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
     token=dependencies
     payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
+    print(type(payload))
+    print(payload)
     user_id = payload['sub']
-    token_record = db.query(models.TokenTable).all()
+    token_record = db.query(models.Token).all()
     info=[]
     for record in token_record :
         print("record",record)
         if (datetime.utcnow() - record.created_date).days >1:
             info.append(record.user_id)
     if info:
-        existing_token = db.query(models.TokenTable).where(TokenTable.user_id.in_(info)).delete()
+        existing_token = db.query(models.Token).where(Token.user_id.in_(info)).delete()
         db.commit()
         
-    existing_token = db.query(models.TokenTable).filter(models.TokenTable.user_id == user_id, models.TokenTable.access_toke==token).first()
+    existing_token = db.query(models.Token).filter(models.Token.user_id == user_id, models.Token.access_toke==token).first()
     if existing_token:
         existing_token.status=False
         db.add(existing_token)
