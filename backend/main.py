@@ -6,6 +6,7 @@ from models import User, Token
 from database import Base, engine, SessionLocal
 from utils import create_access_token,create_refresh_token,verify_password,get_hashed_password
 from sqlalchemy.orm import Session
+from settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, ALGORITHM, JWT_SECRET_KEY, JWT_REFRESH_SECRET_KEY
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -15,11 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from auth_bearer import JWTBearer
 from functools import wraps
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
-ALGORITHM = "HS256"
-JWT_SECRET_KEY = "narscbjim@$@&^@&%^&RFghgjvbdsha"   # should be kept secret
-JWT_REFRESH_SECRET_KEY = "13ugfdfgh@#$%^@&jkl45678902"
+
 
 Base.metadata.create_all(engine)
 def get_session():
@@ -28,6 +25,14 @@ def get_session():
         yield session
     finally:
         session.close()
+
+def check_session_and_return_user_id(token, db):
+    payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
+    user_id = payload['sub']
+    token_record = db.query(models.Token).filter(models.Token.user_id.is_(user_id)).first()
+    if token_record is None:
+        raise HTTPException(status_code=400, detail="Session not found")
+    return user_id
 
 app = FastAPI()
 origins = ["http://localhost"]
@@ -60,11 +65,11 @@ def register_user(user: schemas.UserCreate, session: Session = Depends(get_sessi
 def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
     user = db.query(User).filter(User.email == request.email).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     hashed_pass = user.password
     if not verify_password(request.password, hashed_pass):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Incorrect email or password"
         )
     
@@ -82,21 +87,22 @@ def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
 
 @app.get('/getusers')
 def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
+    check_session_and_return_user_id(dependencies, session)
     user = session.query(models.User).all()
     return user
 
 @app.get('/session')
 def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
-    return 
+    check_session_and_return_user_id(dependencies, session)
 
 @app.post('/change-password')
 def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
     user = db.query(models.User).filter(models.User.email == request.email).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
+        raise HTTPException(status_code=400, detail="User not found")
     
     if not verify_password(request.old_password, user.password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid old password")
+        raise HTTPException(status_code=400, detail="Invalid old password")
     
     encrypted_password = get_hashed_password(request.new_password)
     user.password = encrypted_password
@@ -106,28 +112,11 @@ def change_password(request: schemas.changepassword, db: Session = Depends(get_s
 
 @app.post('/logout')
 def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
-    token=dependencies
-    payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
-    print(type(payload))
-    print(payload)
-    user_id = payload['sub']
-    token_record = db.query(models.Token).all()
-    info=[]
-    for record in token_record :
-        print("record",record)
-        if (datetime.utcnow() - record.created_date).days >1:
-            info.append(record.user_id)
-    if info:
-        existing_token = db.query(models.Token).where(Token.user_id.in_(info)).delete()
-        db.commit()
-        
-    existing_token = db.query(models.Token).filter(models.Token.user_id == user_id, models.Token.access_toke==token).first()
-    if existing_token:
-        existing_token.status=False
-        db.add(existing_token)
-        db.commit()
-        db.refresh(existing_token)
+    user_id = check_session_and_return_user_id(dependencies, db)
+    db.query(models.Token).filter(models.Token.user_id.is_(user_id)).delete()
+    db.commit()
     return {"message":"Logout Successfully"} 
+
 
 
 
