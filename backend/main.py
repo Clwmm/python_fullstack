@@ -26,7 +26,7 @@ def get_session():
     finally:
         session.close()
 
-def check_session_and_return_user_id(token, db):
+def check_session_and_return_user_id(token, db) -> str:
     payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
     user_id = payload['sub']
     token_record = db.query(models.Token).filter(models.Token.user_id.is_(user_id)).first()
@@ -46,18 +46,19 @@ app.add_middleware(
 )
 
 @app.post("/register")
-def register_user(user: schemas.UserCreate, session: Session = Depends(get_session)):
-    existing_user = session.query(models.User).filter_by(email=user.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+def register_user(user: schemas.UserCreate, db: Session = Depends(get_session)):
+    existing_user_email = db.query(models.User).filter_by(email=user.email).first()
+    existing_user_name  = db.query(models.User).filter_by(username=user.username).first()
+    if existing_user_email or existing_user_name:
+        raise HTTPException(status_code=400, detail="User already registered")
 
     encrypted_password =get_hashed_password(user.password)
 
     new_user = models.User(username=user.username, email=user.email, password=encrypted_password )
 
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return {"message":"user created successfully"}
 
@@ -86,14 +87,21 @@ def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
     }
 
 @app.get('/getusers')
-def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
-    check_session_and_return_user_id(dependencies, session)
-    user = session.query(models.User).all()
+def getusers( dependencies=Depends(JWTBearer()),db: Session = Depends(get_session)):
+    check_session_and_return_user_id(dependencies, db)
+    user = db.query(models.User).all()
+    return user
+
+@app.get('/getuser')
+def getusers( dependencies=Depends(JWTBearer()),db: Session = Depends(get_session)):
+    user_id = check_session_and_return_user_id(dependencies, db)
+    user = db.query(models.User).filter(models.User.id.is_(user_id)).first()
+    print(type(user_id))
     return user
 
 @app.get('/session')
-def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
-    check_session_and_return_user_id(dependencies, session)
+def getusers( dependencies=Depends(JWTBearer()),db: Session = Depends(get_session)):
+    check_session_and_return_user_id(dependencies, db)
 
 @app.post('/change-password')
 def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
